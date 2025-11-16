@@ -1,0 +1,23 @@
+Instructions to run the RAG Project's Embedding Database Builder:
+
+1.  **Prerequisites:**
+    *   Ensure you have Python installed (version 3.8 or higher recommended).
+    *   Install `ollama` and have your chosen embedding model (e.g., "llama2") running. You can start Ollama by running `ollama run [EMBEDDING_MODEL]` in your terminal.
+    *   Install the required Python packages. Navigate to the project root directory (`D:\RAG_Project`) in your terminal and run:
+        ```bash
+        pip install -r requirements.txt
+        ```
+    *   Make sure your `.env` file is configured with `EMBEDDING_MODEL` (e.g., `EMBEDDING_MODEL="llama2"`).
+
+2.  **Purpose of `build_db.py`:**
+    This script reads cat facts from `docs/cat-facts.txt`, generates embeddings for them using Ollama, and stores these embeddings in a ChromaDB instance located in the `chroma_db` directory. This database is then used by `rag_app.py` for retrieval-augmented generation.
+
+3.  **How to Run `build_db.py`:**
+    Navigate to the project root directory (`D:\RAG_Project`) in your terminal and run:
+    ```bash
+    python build_db.py
+    ```
+    This will create or update the `chroma_db` directory with the embedded documents.
+
+4.  **Rebuilding the Database:**
+    If you need to rebuild the database (e.g., after changing the `cat-facts.txt` file or the embedding model), you must first delete the `chroma_db` folder. Then, rerun the `python build_db.py` command.
