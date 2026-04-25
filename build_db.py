@@ -7,35 +7,33 @@ from dotenv import load_dotenv
 import ollama
 from chromadb import PersistentClient
 import time
-import nltk
-from nltk.tokenize import sent_tokenize
+import glob
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 load_dotenv()
 
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL") 
 COLLECTION_NAME = "cat_facts_collection"
 PERSIST_DIR = "chroma_db"
-DOCS_PATH = "docs/cat-facts.txt"
+DOCS_DIR = "docs/"
 BATCH_SIZE = 64 # Recommended batch sizes are 32-128 depending on memory and model size.
 
-# Ensure NLTK data is available for sentence tokenization
-try:
-    nltk.data.find('tokenizers/punkt')
-except nltk.downloader.DownloadError:
-    print("Downloading NLTK 'punkt' tokenizer data...")
-    nltk.download('punkt')
-
-def read_dataset(path):
-    """
-    Reads the dataset from the specified path and chunks it into sentences.
-    """
-    with open(path, "r", encoding="utf-8") as f:
-        content = f.read()
-        # Using sentence-based chunking for better context.
-        # For more advanced scenarios, consider sliding window chunking with overlap.
-        sentences = sent_tokenize(content)
-        # Filter out empty sentences
-        return [s.strip() for s in sentences if s.strip()]
+def read_directory(directory_path):
+    """Reads all .txt files in a directory and chunks them with overlap."""
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500,
+        chunk_overlap=50,
+        length_function=len,
+    )
+    
+    all_chunks = []
+    for filepath in glob.glob(os.path.join(directory_path, "*.txt")):
+        with open(filepath, "r", encoding="utf-8") as f:
+            content = f.read()
+            chunks = text_splitter.split_text(content)
+            all_chunks.extend(chunks)
+            
+    return all_chunks
 
 def ensure_client_and_collection():
     client = PersistentClient(path=PERSIST_DIR)
@@ -109,8 +107,8 @@ def main():
                 return
 
     print("Reading dataset...")
-    dataset = read_dataset(DOCS_PATH)
-    print(f"Loaded {len(dataset)} entries from {DOCS_PATH}")
+    dataset = read_directory(DOCS_DIR)
+    print(f"Loaded {len(dataset)} entries from {DOCS_DIR}")
 
     client, collection = ensure_client_and_collection()
 
@@ -121,7 +119,7 @@ def main():
         batch = dataset[idx: idx + BATCH_SIZE]
         # Use UUIDs for robust ID generation to avoid collisions and ensure stability across rebuilds.
         ids = [str(uuid.uuid4()) for _ in range(len(batch))] 
-        metas = [{"source": DOCS_PATH, "chunk_index": idx + j} for j in range(len(batch))]
+        metas = [{"source": DOCS_DIR, "chunk_index": idx + j} for j in range(len(batch))]
 
         # embed batch
         embeddings = embed_batch(batch)
